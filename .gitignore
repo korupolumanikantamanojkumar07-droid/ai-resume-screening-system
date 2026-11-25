@@ -1,0 +1,28 @@
+# Python / Backend
+backend/venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+backend/*.db
+*.sqlite3
+backend/uploads/
+backend/reports_out/
+
+# Frontend / Node
+frontend/node_modules/
+frontend/dist/
+.vite/
+
+# Large Kaggle archives & generated processed outputs (keep initial_demo_dataset.csv)
+datasets/raw/*.zip
+datasets/raw/resume-dataset/
+datasets/raw/resume-entities-for-ner/
+datasets/raw/jobs-and-job-description/
+datasets/processed/
+
+# Env & OS
+.env
+.env.local
+.DS_Store
+Thumbs.db
