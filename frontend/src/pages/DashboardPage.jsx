@@ -4,7 +4,6 @@ import {
   Activity,
   Award,
   Briefcase,
-  Database,
   FileText,
   Sparkles,
   UploadCloud,
@@ -23,7 +22,7 @@ import {
   YAxis,
 } from 'recharts';
 import { api } from '../api';
-import { EmptyState, GlassCard, LoadingSpinner, PageHeader, ScoreBadge, SourceBadge, StatusBadge } from '../components/UI';
+import { EmptyState, GlassCard, LoadingSpinner, PageHeader, ScoreBadge, StatusBadge } from '../components/UI';
 
 const CHART_COLORS = ['#3B82F6', '#8B5CF6', '#0EA5E9', '#10B981', '#F59E0B', '#EC4899'];
 
@@ -40,36 +39,36 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <LoadingSpinner label="Loading live recruiter metrics..." />;
+  if (loading) return <LoadingSpinner label="Loading HR pipeline overview..." />;
   if (error) return <EmptyState icon={Activity} title="Unable to load dashboard" description={error} />;
 
   const s = data.stats;
   const kpis = [
     {
-      label: 'Total Resumes Processed',
-      value: s.total_resumes,
-      sub: `${s.uploaded_resumes} uploaded • ${s.dataset_resumes} dataset`,
-      icon: FileText,
+      label: 'Candidates in Pipeline',
+      value: s.total_candidates,
+      sub: `${s.uploaded_resumes} newly uploaded CVs`,
+      icon: Users,
       color: 'text-blue-400',
     },
     {
-      label: 'Total Candidates',
-      value: s.total_candidates,
-      sub: 'Parsed via spaCy NER + Taxonomy',
-      icon: Users,
+      label: 'Active Job Openings',
+      value: s.active_jobs,
+      sub: 'Ready for candidate screening',
+      icon: Briefcase,
       color: 'text-violet-400',
     },
     {
-      label: 'Active Job Descriptions',
-      value: s.active_jobs,
-      sub: `${s.total_screenings} screenings computed`,
-      icon: Briefcase,
+      label: 'Evaluations Completed',
+      value: s.total_screenings,
+      sub: 'Role-candidate fit assessments',
+      icon: FileText,
       color: 'text-sky-400',
     },
     {
-      label: 'Average Matching Score',
+      label: 'Average Role Fit',
       value: `${s.average_matching_score}%`,
-      sub: 'Weighted deterministic fit',
+      sub: 'Across screened applicants',
       icon: Award,
       color: 'text-emerald-400',
     },
@@ -78,9 +77,9 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        badge="Live Telemetry"
-        title="Recruiter Dashboard"
-        subtitle="Real-time overview of processed resumes, parsed candidates, active roles, and explainable screening rankings."
+        badge="HR Overview"
+        title="Hiring Pipeline Dashboard"
+        subtitle="Track applicant intake, active job requisitions, top-ranked candidates, and skill availability across your company."
         actions={
           <>
             <Link
@@ -95,7 +94,7 @@ export default function DashboardPage() {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition"
             >
               <Sparkles className="w-4 h-4" />
-              Run AI Screening
+              Screen Candidates
             </Link>
           </>
         }
@@ -125,19 +124,19 @@ export default function DashboardPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <GlassCard className="p-6 lg:col-span-2">
-          <h2 className="text-base font-semibold text-white mb-4">Top Extracted Skills Distribution</h2>
+          <h2 className="text-base font-semibold text-white mb-4">Top Skills Across Candidate Pool</h2>
           {data.skills_distribution.length === 0 ? (
             <EmptyState
-              icon={Database}
-              title="No skills extracted yet"
-              description="Upload resumes or load the public Kaggle datasets in Settings to populate real skill distributions."
+              icon={Users}
+              title="No candidate skills yet"
+              description="Upload applicant CVs to view skill coverage across your pipeline."
             />
           ) : (
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={data.skills_distribution} margin={{ top: 10, right: 10, left: -10, bottom: 25 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.12)" />
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} angle={-25} textAnchor="end" interval={0} />
+                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} angle={25} textAnchor="end" interval={0} />
                   <YAxis stroke="#94a3b8" fontSize={11} allowDecimals={false} />
                   <Tooltip
                     contentStyle={{
@@ -159,9 +158,9 @@ export default function DashboardPage() {
         </GlassCard>
 
         <GlassCard className="p-6">
-          <h2 className="text-base font-semibold text-white mb-4">Resume Pool Categories</h2>
+          <h2 className="text-base font-semibold text-white mb-4">Talent Pool Breakdown</h2>
           {data.category_distribution.length === 0 ? (
-            <EmptyState icon={FileText} title="No resumes in pool" description="Upload resumes or load datasets." />
+            <EmptyState icon={FileText} title="No applicants yet" description="Upload resumes to begin." />
           ) : (
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
@@ -199,22 +198,22 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <GlassCard className="p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-white">Candidate Ranking Overview</h2>
+            <h2 className="text-base font-semibold text-white">Top Ranked Candidates</h2>
             <Link to="/results" className="text-xs font-medium text-blue-400 hover:text-blue-300">
-              View All Results →
+              View Full Shortlist →
             </Link>
           </div>
           {data.ranking_overview.length === 0 ? (
             <EmptyState
               icon={Award}
-              title="No screening rankings yet"
-              description="Go to AI Screening to evaluate resumes against a job description."
+              title="No candidate rankings yet"
+              description="Evaluate applicants against an open role to generate ranked shortlists."
               action={
                 <Link
                   to="/screening"
                   className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white"
                 >
-                  Start Screening
+                  Run Screening
                 </Link>
               }
             />
@@ -225,9 +224,8 @@ export default function DashboardPage() {
                   <tr className="border-b border-white/10 text-xs text-slate-400">
                     <th className="py-2.5 pr-3">Rank</th>
                     <th className="py-2.5 pr-3">Candidate</th>
-                    <th className="py-2.5 pr-3">Job Role</th>
-                    <th className="py-2.5 pr-3">Source</th>
-                    <th className="py-2.5 pr-3">Match Score</th>
+                    <th className="py-2.5 pr-3">Target Role</th>
+                    <th className="py-2.5 pr-3">Role Fit</th>
                     <th className="py-2.5">Status</th>
                   </tr>
                 </thead>
@@ -241,9 +239,6 @@ export default function DashboardPage() {
                         </Link>
                       </td>
                       <td className="py-3 pr-3 text-slate-300 text-xs">{row.job_title}</td>
-                      <td className="py-3 pr-3">
-                        <SourceBadge sourceType={row.source_type} />
-                      </td>
                       <td className="py-3 pr-3">
                         <ScoreBadge score={row.overall_score} />
                       </td>
@@ -259,16 +254,16 @@ export default function DashboardPage() {
         </GlassCard>
 
         <GlassCard className="p-6">
-          <h2 className="text-base font-semibold text-white mb-4">Recent Screening Activity</h2>
+          <h2 className="text-base font-semibold text-white mb-4">Recent Hiring Activity</h2>
           {data.recent_activity.length === 0 ? (
-            <p className="text-sm text-slate-400">No recent activity recorded yet.</p>
+            <p className="text-sm text-slate-400">No recent activity yet.</p>
           ) : (
             <div className="space-y-3">
-              {data.recent_activity.map((act, idx) => (
+              {data.recent_activity.slice(0, 6).map((act, idx) => (
                 <div key={idx} className="p-3 rounded-xl bg-slate-900/60 border border-white/10">
                   <div className="text-xs font-medium text-slate-200">{act.title}</div>
                   <div className="flex items-center justify-between mt-1.5 text-[11px] text-slate-400">
-                    <span className="capitalize">{act.type}</span>
+                    <span className="capitalize">{act.type === 'screening' ? 'Evaluation' : 'Intake'}</span>
                     {act.score !== null && <ScoreBadge score={act.score} />}
                   </div>
                 </div>

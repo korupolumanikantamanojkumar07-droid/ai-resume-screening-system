@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Briefcase, Plus, Sparkles, Trash2, Wand2 } from 'lucide-react';
+import { Briefcase, Plus, Trash2, Wand2 } from 'lucide-react';
 import { api } from '../api';
-import { EmptyState, GlassCard, LoadingSpinner, PageHeader, SourceBadge } from '../components/UI';
+import { EmptyState, GlassCard, LoadingSpinner, PageHeader } from '../components/UI';
 
 const EMPTY_FORM = {
   title: '',
@@ -60,7 +60,7 @@ export default function JobsPage() {
       }));
       setMsg({
         type: 'success',
-        message: `NLP extracted ${res.required_skills?.length || 0} required skills and ${res.preferred_skills?.length || 0} preferred skills.`,
+        message: `Extracted ${res.required_skills?.length || 0} required skills and ${res.preferred_skills?.length || 0} preferred skills.`,
       });
     } catch (e) {
       setMsg({ type: 'error', message: e.message });
@@ -99,7 +99,7 @@ export default function JobsPage() {
         auto_extract: true,
       });
       setForm(EMPTY_FORM);
-      setMsg({ type: 'success', message: 'Job description saved and indexed with semantic embeddings.' });
+      setMsg({ type: 'success', message: 'Role requisition created and ready for screening.' });
       await loadJobs();
     } catch (e) {
       setMsg({ type: 'error', message: e.message });
@@ -120,9 +120,9 @@ export default function JobsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        badge="Step 2 • JD NLP Analyzer"
-        title="Job Descriptions"
-        subtitle="Create job requisitions or paste descriptions to automatically extract mandatory skills, preferred skills, experience, and education."
+        badge="Job Requisitions"
+        title="Open Roles & Requirements"
+        subtitle="Create open positions or paste a job description to automatically populate required skills, preferred qualifications, and minimum experience."
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -130,13 +130,13 @@ export default function JobsPage() {
         <GlassCard className="p-6 lg:col-span-2">
           <h2 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
             <Plus className="w-4 h-4 text-blue-400" />
-            New Job Description
+            Create Open Role
           </h2>
 
           <form onSubmit={handleSave} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Job Title *</label>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Role Title *</label>
                 <input
                   type="text"
                   required
@@ -167,7 +167,7 @@ export default function JobsPage() {
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-300 hover:text-violet-200 disabled:opacity-50"
                 >
                   <Wand2 className="w-3.5 h-3.5" />
-                  {analyzing ? 'Extracting...' : 'Auto-Extract with NLP'}
+                  {analyzing ? 'Extracting...' : 'Extract Requirements'}
                 </button>
               </div>
               <textarea
@@ -175,7 +175,7 @@ export default function JobsPage() {
                 required
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Paste full job description including required skills, preferred qualifications, experience, and degree..."
+                placeholder="Paste job responsibilities, required skills, nice-to-have skills, experience, and degree requirements..."
                 className="w-full px-3 py-2 rounded-xl bg-slate-900/80 border border-white/10 text-sm text-white focus:outline-none focus:border-blue-400"
               />
             </div>
@@ -186,7 +186,7 @@ export default function JobsPage() {
                 type="text"
                 value={form.required_skills_text}
                 onChange={(e) => setForm({ ...form, required_skills_text: e.target.value })}
-                placeholder="Python, NLP, Machine Learning, FastAPI"
+                placeholder="Python, Machine Learning, SQL"
                 className="w-full px-3 py-2 rounded-xl bg-slate-900/80 border border-white/10 text-sm text-white focus:outline-none focus:border-blue-400"
               />
             </div>
@@ -197,7 +197,7 @@ export default function JobsPage() {
                 type="text"
                 value={form.preferred_skills_text}
                 onChange={(e) => setForm({ ...form, preferred_skills_text: e.target.value })}
-                placeholder="Docker, Kubernetes, AWS"
+                placeholder="Docker, AWS, Git"
                 className="w-full px-3 py-2 rounded-xl bg-slate-900/80 border border-white/10 text-sm text-white focus:outline-none focus:border-blue-400"
               />
             </div>
@@ -237,7 +237,7 @@ export default function JobsPage() {
                 type="text"
                 value={form.additional_qualifications}
                 onChange={(e) => setForm({ ...form, additional_qualifications: e.target.value })}
-                placeholder="Certifications, research publications, etc."
+                placeholder="Certifications, domain experience, etc."
                 className="w-full px-3 py-2 rounded-xl bg-slate-900/80 border border-white/10 text-sm text-white focus:outline-none focus:border-blue-400"
               />
             </div>
@@ -259,7 +259,7 @@ export default function JobsPage() {
               disabled={saving}
               className="w-full py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 disabled:opacity-50 transition"
             >
-              {saving ? 'Saving & Indexing...' : 'Save Job Description'}
+              {saving ? 'Saving Role...' : 'Save Open Role'}
             </button>
           </form>
         </GlassCard>
@@ -267,36 +267,28 @@ export default function JobsPage() {
         {/* Saved Jobs List */}
         <div className="lg:col-span-3 space-y-4">
           {loading ? (
-            <LoadingSpinner label="Loading job descriptions..." />
+            <LoadingSpinner label="Loading open roles..." />
           ) : jobs.length === 0 ? (
             <EmptyState
               icon={Briefcase}
-              title="No job descriptions saved"
-              description="Create a job requisition on the left or load the Kaggle Job Description dataset in Settings."
+              title="No open roles saved"
+              description="Create your first job requisition using the form on the left."
             />
           ) : (
             jobs.map((job) => (
               <GlassCard key={job.id} hover className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-base font-semibold text-white">{job.title}</h3>
-                      <SourceBadge
-                        sourceType={
-                          job.source_type === 'public_dataset' || job.source_type === 'synthetic_demo'
-                            ? job.source_type
-                            : 'uploaded'
-                        }
-                      />
-                    </div>
+                    <h3 className="text-base font-semibold text-white">{job.title}</h3>
                     <p className="text-xs text-slate-400 mt-1">
-                      {job.department} • Min {job.min_experience_years} yrs • {job.education_requirement}
+                      {job.department === 'Synthetic Demo' ? 'General' : job.department} • Min {job.min_experience_years} yrs •{' '}
+                      {job.education_requirement}
                     </p>
                   </div>
                   <button
                     onClick={() => handleDelete(job.id)}
                     className="p-1.5 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 transition"
-                    title="Delete job"
+                    title="Delete role"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

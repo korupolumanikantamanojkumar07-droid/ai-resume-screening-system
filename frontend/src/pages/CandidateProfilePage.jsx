@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../api';
-import { EmptyState, GlassCard, LoadingSpinner, PageHeader, ScoreBadge, SourceBadge, StatusBadge } from '../components/UI';
+import { EmptyState, GlassCard, LoadingSpinner, PageHeader, ScoreBadge, StatusBadge } from '../components/UI';
 
 export default function CandidateProfilePage() {
   const { id } = useParams();
@@ -24,14 +24,32 @@ export default function CandidateProfilePage() {
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState(false);
 
-  useEffect(() => {
+  const loadProfile = () => {
     setLoading(true);
     api
       .getCandidateProfile(id)
       .then(setProfile)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadProfile();
   }, [id]);
+
+  const handleStatusUpdate = async (screeningId, nextStatus) => {
+    try {
+      await api.updateScreeningStatus(screeningId, nextStatus);
+      setProfile((prev) => ({
+        ...prev,
+        evaluations: prev.evaluations.map((ev) =>
+          ev.screening_id === screeningId ? { ...ev, screening_status: nextStatus } : ev
+        ),
+      }));
+    } catch {
+      // ignore
+    }
+  };
 
   const handleDownloadPdf = async () => {
     setDownloading(true);
@@ -39,6 +57,7 @@ export default function CandidateProfilePage() {
       const rep = await api.generateReport({
         candidate_id: Number(id),
         report_type: 'candidate_pdf',
+        include_pii: !profile.anonymized,
       });
       window.open(api.reportDownloadUrl(rep.id), '_blank');
     } catch (e) {
@@ -48,43 +67,66 @@ export default function CandidateProfilePage() {
     }
   };
 
-  if (loading) return <LoadingSpinner label="Loading candidate NLP profile..." />;
+  if (loading) return <LoadingSpinner label="Loading candidate dossier..." />;
   if (error || !profile) return <EmptyState icon={Sparkles} title="Candidate not found" description={error} />;
 
   const activeEval = profile.evaluations?.[0];
   const breakdownData = activeEval
     ? [
-        { metric: 'Req Skills', score: activeEval.required_skill_score },
-        { metric: 'Semantic', score: activeEval.semantic_similarity_score },
-        { metric: 'TF-IDF', score: activeEval.tfidf_similarity_score },
+        { metric: 'Required Skills', score: activeEval.required_skill_score },
+        { metric: 'Role Alignment', score: activeEval.semantic_similarity_score },
         { metric: 'Experience', score: activeEval.experience_score },
         { metric: 'Education', score: activeEval.education_score },
-        { metric: 'Preferred', score: activeEval.preferred_skill_score },
+        { metric: 'Preferred Skills', score: activeEval.preferred_skill_score },
       ]
     : [];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Link to="/results" className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white">
           <ArrowLeft className="w-4 h-4" />
-          Back to Candidate Results
+          Back to Shortlist
         </Link>
-        <button
-          onClick={handleDownloadPdf}
-          disabled={downloading}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-xs font-semibold text-white shadow-lg shadow-blue-600/20"
-        >
-          <Download className="w-3.5 h-3.5" />
-          {downloading ? 'Generating PDF...' : 'Download Candidate PDF Report'}
-        </button>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {activeEval && (
+            <>
+              <button
+                onClick={() => handleStatusUpdate(activeEval.screening_id, 'shortlisted')}
+                className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/30 text-xs font-semibold text-emerald-200 transition"
+              >
+                Shortlist
+              </button>
+              <button
+                onClick={() => handleStatusUpdate(activeEval.screening_id, 'review')}
+                className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/30 text-xs font-semibold text-amber-200 transition"
+              >
+                In Review
+              </button>
+              <button
+                onClick={() => handleStatusUpdate(activeEval.screening_id, 'rejected')}
+                className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/30 text-xs font-semibold text-rose-200 transition"
+              >
+                Reject
+              </button>
+            </>
+          )}
+          <button
+            onClick={handleDownloadPdf}
+            disabled={downloading}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-xs font-semibold text-white shadow-lg shadow-blue-600/20"
+          >
+            <Download className="w-3.5 h-3.5" />
+            {downloading ? 'Generating PDF...' : 'Download Dossier PDF'}
+          </button>
+        </div>
       </div>
 
       <PageHeader
-        badge={`Candidate ID: ${profile.anonymous_id}`}
+        badge={profile.anonymized ? 'Blind Review Profile' : 'Candidate Dossier'}
         title={profile.display_name}
-        subtitle={`Extracted from ${profile.filename} (${profile.ocr_used ? 'OCR Processed' : 'Direct Text Extraction'})`}
-        actions={<SourceBadge sourceType={profile.source_type} />}
+        subtitle={profile.location ? `Based in ${profile.location}` : 'Verified candidate evaluation summary'}
       />
 
       {/* Contact & Key Facts */}
@@ -93,20 +135,20 @@ export default function CandidateProfilePage() {
           <Mail className="w-4 h-4 text-blue-400 shrink-0" />
           <div className="min-w-0">
             <div className="text-[11px] text-slate-400">Email</div>
-            <div className="text-xs font-medium text-white truncate">{profile.email || 'Not detected'}</div>
+            <div className="text-xs font-medium text-white truncate">{profile.email || 'Protected / Not listed'}</div>
           </div>
         </GlassCard>
         <GlassCard className="p-4 flex items-center gap-3">
           <Phone className="w-4 h-4 text-violet-400 shrink-0" />
           <div className="min-w-0">
             <div className="text-[11px] text-slate-400">Phone</div>
-            <div className="text-xs font-medium text-white truncate">{profile.phone || 'Not detected'}</div>
+            <div className="text-xs font-medium text-white truncate">{profile.phone || 'Protected / Not listed'}</div>
           </div>
         </GlassCard>
         <GlassCard className="p-4 flex items-center gap-3">
           <Briefcase className="w-4 h-4 text-emerald-400 shrink-0" />
           <div>
-            <div className="text-[11px] text-slate-400">Experience</div>
+            <div className="text-[11px] text-slate-400">Total Experience</div>
             <div className="text-xs font-medium text-white">{profile.total_experience_years} Years</div>
           </div>
         </GlassCard>
@@ -121,16 +163,16 @@ export default function CandidateProfilePage() {
         </GlassCard>
       </div>
 
-      {/* Detailed Scoring Breakdown */}
+      {/* Role Fit Breakdown */}
       {activeEval && (
         <GlassCard className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
             <div>
               <h2 className="text-base font-semibold text-white">
-                Scoring Breakdown — {activeEval.job_title} (Rank #{activeEval.rank_position})
+                Role Compatibility — {activeEval.job_title} (Rank #{activeEval.rank_position})
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                {activeEval.explanation?.decision_support_notice}
+                Fit breakdown across required skills, role alignment, experience, and education criteria.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -153,7 +195,7 @@ export default function CandidateProfilePage() {
                       borderRadius: '12px',
                     }}
                   />
-                  <Bar dataKey="score" fill="#3B82F6" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="score" name="Fit Score %" fill="#3B82F6" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -161,7 +203,7 @@ export default function CandidateProfilePage() {
             <div className="space-y-4">
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-emerald-300 mb-2 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Matched Requirements
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Matched Role Requirements
                 </h3>
                 <div className="flex flex-wrap gap-1.5">
                   {(activeEval.matched_skills || []).length > 0 ? (
@@ -171,14 +213,14 @@ export default function CandidateProfilePage() {
                       </span>
                     ))
                   ) : (
-                    <span className="text-xs text-slate-400">None</span>
+                    <span className="text-xs text-slate-400">None matched yet</span>
                   )}
                 </div>
               </div>
 
               <div>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-rose-300 mb-2 flex items-center gap-1.5">
-                  <XCircle className="w-3.5 h-3.5" /> Missing Requirements
+                  <XCircle className="w-3.5 h-3.5" /> Missing Role Requirements
                 </h3>
                 <div className="flex flex-wrap gap-1.5">
                   {(activeEval.missing_skills || []).length > 0 ? (
@@ -188,7 +230,7 @@ export default function CandidateProfilePage() {
                       </span>
                     ))
                   ) : (
-                    <span className="text-xs text-emerald-300">All required skills matched!</span>
+                    <span className="text-xs text-emerald-300">Meets all required skills!</span>
                   )}
                 </div>
               </div>
@@ -196,31 +238,24 @@ export default function CandidateProfilePage() {
               <div className="p-3 rounded-xl bg-slate-900/70 border border-white/10 text-xs text-slate-300 space-y-1">
                 <div>• {activeEval.explanation?.experience_note}</div>
                 <div>• {activeEval.explanation?.education_note}</div>
-                <div>
-                  • Raw Cosine Similarity: <span className="font-mono text-blue-300">{activeEval.explanation?.raw_cosine_similarity}</span>{' '}
-                  | TF-IDF Cosine: <span className="font-mono text-violet-300">{activeEval.explanation?.tfidf_cosine_similarity}</span>
-                </div>
               </div>
             </div>
           </div>
         </GlassCard>
       )}
 
-      {/* Extracted Technical & Soft Skills */}
+      {/* Skills & Qualifications */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <GlassCard className="p-6">
-          <h2 className="text-base font-semibold text-white mb-4">Extracted Skills &amp; Match Method</h2>
+          <h2 className="text-base font-semibold text-white mb-4">Candidate Skills</h2>
           <div className="flex flex-wrap gap-2">
             {(profile.skills || []).map((sk) => (
-              <div
+              <span
                 key={sk.id}
-                className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs flex items-center gap-2"
+                className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs font-medium text-white"
               >
-                <span className="font-medium text-white">{sk.name}</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 capitalize">
-                  {sk.match_method}
-                </span>
-              </div>
+                {sk.name}
+              </span>
             ))}
           </div>
         </GlassCard>
@@ -229,8 +264,8 @@ export default function CandidateProfilePage() {
           <h2 className="text-base font-semibold text-white">Education, Projects &amp; Certifications</h2>
           <div className="text-xs text-slate-300 space-y-2">
             <div>
-              <span className="text-slate-400 font-semibold">Degree / University:</span>{' '}
-              {profile.degree || 'Not parsed'} {profile.university ? `— ${profile.university}` : ''}
+              <span className="text-slate-400 font-semibold">Degree / Institution:</span>{' '}
+              {profile.degree || profile.education_level} {profile.university ? `— ${profile.university}` : ''}
             </div>
             {profile.location && (
               <div className="flex items-center gap-1.5 text-slate-300">
@@ -251,7 +286,7 @@ export default function CandidateProfilePage() {
             )}
             {profile.projects?.length > 0 && (
               <div>
-                <div className="text-slate-400 font-semibold mb-1">Projects</div>
+                <div className="text-slate-400 font-semibold mb-1">Key Projects</div>
                 <ul className="list-disc list-inside space-y-0.5 text-slate-300">
                   {profile.projects.map((p, i) => (
                     <li key={i}>{p}</li>
@@ -263,9 +298,9 @@ export default function CandidateProfilePage() {
         </GlassCard>
       </div>
 
-      {/* Work Experience */}
+      {/* Experience Summary */}
       <GlassCard className="p-6">
-        <h2 className="text-base font-semibold text-white mb-3">Extracted Work Experience &amp; Summary</h2>
+        <h2 className="text-base font-semibold text-white mb-3">Work Experience Summary</h2>
         <p className="text-xs text-slate-300 leading-relaxed mb-3">{profile.experience_summary}</p>
         {profile.work_experience?.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">

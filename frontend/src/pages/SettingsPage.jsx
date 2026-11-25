@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Database, Plus, Save, Shield, Sliders, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Database, Plus, Save, Shield, Sliders, Trash2 } from 'lucide-react';
 import { api } from '../api';
 import { GlassCard, LoadingSpinner, PageHeader } from '../components/UI';
+
+const WEIGHT_LABELS = {
+  required_skills: 'Required Skills Match',
+  semantic_similarity: 'Role Context & Alignment',
+  experience_match: 'Relevant Experience',
+  education_match: 'Education Qualifications',
+  preferred_skills: 'Preferred / Bonus Skills',
+};
 
 export default function SettingsPage() {
   const [settingsData, setSettingsData] = useState(null);
@@ -9,6 +17,7 @@ export default function SettingsPage() {
   const [privacy, setPrivacy] = useState(null);
   const [newSkill, setNewSkill] = useState({ name: '', category: 'AI/ML', synonyms: '' });
   const [datasetCfg, setDatasetCfg] = useState({ resume_limit: 40, ner_limit: 20, jobs_limit: 10 });
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingDatasets, setLoadingDatasets] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -29,7 +38,7 @@ export default function SettingsPage() {
     loadSettings();
   }, []);
 
-  if (loading || !weights || !privacy) return <LoadingSpinner label="Loading platform configuration..." />;
+  if (loading || !weights || !privacy) return <LoadingSpinner label="Loading HR settings..." />;
 
   const weightSum = Object.values(weights).reduce((a, b) => a + Number(b || 0), 0);
 
@@ -40,7 +49,7 @@ export default function SettingsPage() {
     }
     try {
       await api.updateWeights(weights);
-      setMsg({ type: 'success', message: 'Scoring weights updated.' });
+      setMsg({ type: 'success', message: 'Evaluation weights saved.' });
     } catch (e) {
       setMsg({ type: 'error', message: e.message });
     }
@@ -49,7 +58,7 @@ export default function SettingsPage() {
   const savePrivacy = async () => {
     try {
       await api.updatePrivacy(privacy);
-      setMsg({ type: 'success', message: 'Privacy & file retention settings saved.' });
+      setMsg({ type: 'success', message: 'Privacy & retention preferences saved.' });
     } catch (e) {
       setMsg({ type: 'error', message: e.message });
     }
@@ -65,7 +74,7 @@ export default function SettingsPage() {
         synonyms: newSkill.synonyms.split(',').map((s) => s.trim()).filter(Boolean),
       });
       setNewSkill({ name: '', category: 'AI/ML', synonyms: '' });
-      setMsg({ type: 'success', message: 'Added skill to taxonomy.' });
+      setMsg({ type: 'success', message: 'Skill added to company directory.' });
       await loadSettings();
     } catch (e) {
       setMsg({ type: 'error', message: e.message });
@@ -76,11 +85,8 @@ export default function SettingsPage() {
     setLoadingDatasets(true);
     setMsg(null);
     try {
-      const res = await api.loadDatasets({ ...datasetCfg, clear_existing_dataset: false });
-      const summaryText = (res.batches || [])
-        .map((b) => `${b.dataset}: +${b.newly_loaded} new (${b.total_in_db} total)`)
-        .join(' | ');
-      setMsg({ type: 'success', message: `Kaggle datasets ingested! ${summaryText}` });
+      await api.loadDatasets({ ...datasetCfg, clear_existing_dataset: false });
+      setMsg({ type: 'success', message: 'Talent pool synchronized successfully.' });
       await loadSettings();
     } catch (e) {
       setMsg({ type: 'error', message: e.message });
@@ -96,7 +102,7 @@ export default function SettingsPage() {
       const res = await api.loadInitialDemo();
       setMsg({
         type: 'success',
-        message: `Initial synthetic demo dataset loaded: +${res.candidates_loaded} candidates, +${res.jobs_loaded} jobs (${res.total_demo_resumes_in_db} total in DB).`,
+        message: `Loaded ${res.candidates_loaded} candidates and ${res.jobs_loaded} roles.`,
       });
       await loadSettings();
     } catch (e) {
@@ -109,9 +115,9 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        badge="Configuration & Kaggle Datasets"
-        title="Settings & Dataset Pipeline"
-        subtitle="Configure deterministic scoring weights, manage the skill taxonomy, control candidate privacy/retention, and load the Kaggle datasets."
+        badge="HR Controls"
+        title="Screening & Privacy Settings"
+        subtitle="Customize candidate evaluation weights, privacy masking, document retention, and your company skill directory."
       />
 
       {msg && (
@@ -126,13 +132,13 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Scoring Weights & Privacy */}
+      {/* Evaluation Weights & Privacy */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <GlassCard className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-white flex items-center gap-2">
               <Sliders className="w-4 h-4 text-blue-400" />
-              Scoring Weight Configuration
+              Evaluation Criteria Weights
             </h2>
             <span className={`text-xs font-mono ${Math.abs(weightSum - 100) < 0.01 ? 'text-emerald-300' : 'text-rose-300'}`}>
               Total: {weightSum.toFixed(0)}%
@@ -142,7 +148,7 @@ export default function SettingsPage() {
           {Object.entries(weights).map(([key, val]) => (
             <div key={key}>
               <div className="flex justify-between text-xs text-slate-300 mb-1">
-                <span className="capitalize">{key.replace('_', ' ')}</span>
+                <span>{WEIGHT_LABELS[key] || key}</span>
                 <span className="font-mono">{val}%</span>
               </div>
               <input
@@ -162,20 +168,20 @@ export default function SettingsPage() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white"
           >
             <Save className="w-3.5 h-3.5" />
-            Save Scoring Weights
+            Save Evaluation Weights
           </button>
         </GlassCard>
 
         <GlassCard className="p-6 space-y-4">
           <h2 className="text-base font-semibold text-white flex items-center gap-2">
             <Shield className="w-4 h-4 text-emerald-400" />
-            Privacy &amp; File Retention
+            Candidate Privacy &amp; Retention
           </h2>
 
           <label className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-white/10 cursor-pointer">
             <div>
-              <div className="text-xs font-medium text-white">Blind Review (Anonymize Names)</div>
-              <div className="text-[11px] text-slate-400">Display Anonymous IDs (CND-XXXX) instead of candidate names</div>
+              <div className="text-xs font-medium text-white">Blind Screening Mode</div>
+              <div className="text-[11px] text-slate-400">Hide candidate names across shortlists and dossiers</div>
             </div>
             <input
               type="checkbox"
@@ -186,8 +192,8 @@ export default function SettingsPage() {
 
           <label className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-white/10 cursor-pointer">
             <div>
-              <div className="text-xs font-medium text-white">Mask Contact Information</div>
-              <div className="text-[11px] text-slate-400">Mask email addresses and phone numbers in API responses</div>
+              <div className="text-xs font-medium text-white">Mask Candidate Contact Details</div>
+              <div className="text-[11px] text-slate-400">Protect personal emails and phone numbers in HR views</div>
             </div>
             <input
               type="checkbox"
@@ -197,7 +203,7 @@ export default function SettingsPage() {
           </label>
 
           <div>
-            <label className="block text-xs text-slate-300 mb-1">Uploaded File Retention (Days)</label>
+            <label className="block text-xs text-slate-300 mb-1">Resume Retention Period (Days)</label>
             <input
               type="number"
               min={1}
@@ -218,113 +224,13 @@ export default function SettingsPage() {
         </GlassCard>
       </div>
 
-      {/* Kaggle Dataset Loader & Inspection */}
+      {/* Company Skill Directory */}
       <GlassCard className="p-6 space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-semibold text-white flex items-center gap-2">
-              <Database className="w-4 h-4 text-violet-400" />
-              Public Kaggle Dataset Loader &amp; Quality Inspection
-            </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Loads real cleaned records into SQLite with <code className="text-violet-300">source_type=public_dataset</code>.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={handleLoadInitialDemo}
-              disabled={loadingDatasets}
-              className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/30 text-xs font-semibold text-amber-200 disabled:opacity-50"
-            >
-              Load Initial Demo CSV
-            </button>
-            <button
-              onClick={handleLoadDatasets}
-              disabled={loadingDatasets}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-xs font-semibold text-white disabled:opacity-50"
-            >
-              {loadingDatasets ? 'Ingesting & Running NLP...' : 'Load / Sync Public Datasets'}
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Resume Dataset Sample Size</label>
-            <input
-              type="number"
-              min={10}
-              max={500}
-              value={datasetCfg.resume_limit}
-              onChange={(e) => setDatasetCfg({ ...datasetCfg, resume_limit: Number(e.target.value) || 40 })}
-              className="w-full px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">NER Dataset Sample Size</label>
-            <input
-              type="number"
-              min={5}
-              max={220}
-              value={datasetCfg.ner_limit}
-              onChange={(e) => setDatasetCfg({ ...datasetCfg, ner_limit: Number(e.target.value) || 20 })}
-              className="w-full px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Job Descriptions Sample Size</label>
-            <input
-              type="number"
-              min={5}
-              max={100}
-              value={datasetCfg.jobs_limit}
-              onChange={(e) => setDatasetCfg({ ...datasetCfg, jobs_limit: Number(e.target.value) || 10 })}
-              className="w-full px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-white"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
-          {(settingsData.raw_dataset_inspection?.datasets || []).map((ds) => {
-            const loadedBatch = (settingsData.dataset_batches || []).find((b) => b.dataset_key === ds.key);
-            const handleLoadInitialDemo = async () => {
-    setLoadingDatasets(true);
-    setMsg(null);
-    try {
-      const res = await api.loadInitialDemo();
-      setMsg({
-        type: 'success',
-        message: `Initial synthetic demo dataset loaded: +${res.candidates_loaded} candidates, +${res.jobs_loaded} jobs (${res.total_demo_resumes_in_db} total in DB).`,
-      });
-      await loadSettings();
-    } catch (e) {
-      setMsg({ type: 'error', message: e.message });
-    } finally {
-      setLoadingDatasets(false);
-    }
-  };
-
-  return (
-              <div key={ds.key} className="p-4 rounded-xl bg-slate-900/70 border border-white/10 text-xs space-y-1.5">
-                <div className="font-semibold text-white">{ds.name}</div>
-                <div className="text-slate-400">Raw Rows: {ds.row_count ?? 0} • Duplicates: {ds.duplicate_count ?? 0}</div>
-                <div className="text-slate-400">Columns: {(ds.columns || []).join(', ')}</div>
-                <div className="text-emerald-300 font-medium">
-                  Loaded in DB: {loadedBatch ? loadedBatch.loaded_count : 0}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </GlassCard>
-
-      {/* Skill Taxonomy Management */}
-      <GlassCard className="p-6 space-y-4">
-        <h2 className="text-base font-semibold text-white">Skill Taxonomy Management ({settingsData.skills_taxonomy.length} skills)</h2>
+        <h2 className="text-base font-semibold text-white">Company Skill Directory ({settingsData.skills_taxonomy.length} skills)</h2>
         <form onSubmit={handleAddSkill} className="flex flex-wrap gap-2">
           <input
             type="text"
-            placeholder="Skill name (e.g. LangGraph)"
+            placeholder="Skill name (e.g. Figma)"
             value={newSkill.name}
             onChange={(e) => setNewSkill({ ...newSkill, name: e.target.value })}
             className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-white"
@@ -346,7 +252,7 @@ export default function SettingsPage() {
           </select>
           <input
             type="text"
-            placeholder="Synonyms (comma-separated)"
+            placeholder="Alternate names (comma-separated)"
             value={newSkill.synonyms}
             onChange={(e) => setNewSkill({ ...newSkill, synonyms: e.target.value })}
             className="flex-1 min-w-[200px] px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-white"
@@ -359,7 +265,7 @@ export default function SettingsPage() {
           </button>
         </form>
 
-        <div className="max-h-60 overflow-y-auto flex flex-wrap gap-1.5 pt-2">
+        <div className="max-h-56 overflow-y-auto flex flex-wrap gap-1.5 pt-2">
           {settingsData.skills_taxonomy.map((sk) => (
             <div
               key={sk.id}
@@ -382,6 +288,77 @@ export default function SettingsPage() {
             </div>
           ))}
         </div>
+      </GlassCard>
+
+      {/* Collapsed Advanced Admin Section (hidden from day-to-day HR view) */}
+      <GlassCard className="p-5">
+        <button
+          type="button"
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="w-full flex items-center justify-between text-xs font-semibold text-slate-400 hover:text-white transition"
+        >
+          <span className="inline-flex items-center gap-2">
+            <Database className="w-4 h-4 text-slate-400" />
+            Administrator: Bulk Talent Pool Import
+          </span>
+          {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+
+        {showAdvanced && (
+          <div className="mt-4 pt-4 border-t border-white/10 space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={handleLoadInitialDemo}
+                disabled={loadingDatasets}
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-white disabled:opacity-50"
+              >
+                Import Sample Talent Pool
+              </button>
+              <button
+                onClick={handleLoadDatasets}
+                disabled={loadingDatasets}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white disabled:opacity-50"
+              >
+                {loadingDatasets ? 'Importing...' : 'Sync Extended Talent Pool'}
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">General Pool Limit</label>
+                <input
+                  type="number"
+                  min={10}
+                  max={500}
+                  value={datasetCfg.resume_limit}
+                  onChange={(e) => setDatasetCfg({ ...datasetCfg, resume_limit: Number(e.target.value) || 40 })}
+                  className="w-full px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Entity Pool Limit</label>
+                <input
+                  type="number"
+                  min={5}
+                  max={220}
+                  value={datasetCfg.ner_limit}
+                  onChange={(e) => setDatasetCfg({ ...datasetCfg, ner_limit: Number(e.target.value) || 20 })}
+                  className="w-full px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Role Templates Limit</label>
+                <input
+                  type="number"
+                  min={5}
+                  max={100}
+                  value={datasetCfg.jobs_limit}
+                  onChange={(e) => setDatasetCfg({ ...datasetCfg, jobs_limit: Number(e.target.value) || 10 })}
+                  className="w-full px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs text-white"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </GlassCard>
     </div>
   );

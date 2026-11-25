@@ -34,36 +34,41 @@ export function PageHeader({ title, subtitle, badge, actions }) {
 export function ScoreBadge({ score }) {
   const val = Number(score || 0);
   let cls = 'bg-rose-500/15 text-rose-300 border-rose-400/30';
-  if (val >= 75) cls = 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30';
-  else if (val >= 55) cls = 'bg-blue-500/15 text-blue-300 border-blue-400/30';
-  else if (val >= 35) cls = 'bg-amber-500/15 text-amber-300 border-amber-400/30';
+  let bar = 'bg-rose-400';
+  if (val >= 75) {
+    cls = 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30';
+    bar = 'bg-emerald-400';
+  } else if (val >= 55) {
+    cls = 'bg-blue-500/15 text-blue-300 border-blue-400/30';
+    bar = 'bg-blue-400';
+  } else if (val >= 35) {
+    cls = 'bg-amber-500/15 text-amber-300 border-amber-400/30';
+    bar = 'bg-amber-400';
+  }
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold border ${cls}`}>
-      {val.toFixed(1)}%
-    </span>
+    <div className="inline-flex items-center gap-2">
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold border ${cls}`}>
+        {val.toFixed(1)}%
+      </span>
+      <div className="hidden sm:block w-14 h-1.5 rounded-full bg-white/10 overflow-hidden">
+        <div className={`h-full rounded-full ${bar}`} style={{ width: `${Math.min(100, Math.max(0, val))}%` }} />
+      </div>
+    </div>
   );
 }
 
 export function SourceBadge({ sourceType }) {
-  const map = {
-    public_dataset: {
-      cls: 'bg-violet-500/15 text-violet-300 border-violet-400/30',
-      label: 'Public Dataset',
-    },
-    synthetic_demo: {
-      cls: 'bg-amber-500/15 text-amber-300 border-amber-400/30',
-      label: 'Synthetic Demo',
-    },
-    uploaded: {
-      cls: 'bg-sky-500/15 text-sky-300 border-sky-400/30',
-      label: 'Uploaded Resume',
-    },
-  };
-  const cfg = map[sourceType] || map.uploaded;
+  const isUploaded = sourceType === 'uploaded';
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border ${cfg.cls}`}>
-      {cfg.label}
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border ${
+        isUploaded
+          ? 'bg-sky-500/15 text-sky-300 border-sky-400/30'
+          : 'bg-slate-500/15 text-slate-300 border-slate-400/25'
+      }`}
+    >
+      {isUploaded ? 'Uploaded CV' : 'Talent Pool'}
     </span>
   );
 }
@@ -77,15 +82,23 @@ export function StatusBadge({ status }) {
     completed: 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30',
     active: 'bg-emerald-500/15 text-emerald-300 border-emerald-400/30',
   };
+  const labels = {
+    shortlisted: 'Shortlisted',
+    review: 'In Review',
+    rejected: 'Rejected',
+    screened: 'Evaluated',
+    completed: 'Ready',
+    active: 'Active',
+  };
   const cls = map[status] || 'bg-slate-500/15 text-slate-300 border-slate-400/30';
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize border ${cls}`}>
-      {status}
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${cls}`}>
+      {labels[status] || status}
     </span>
   );
 }
 
-export function LoadingSpinner({ label = 'Processing...' }) {
+export function LoadingSpinner({ label = 'Loading...' }) {
   return (
     <div className="flex flex-col items-center justify-center py-14 gap-3 text-slate-400">
       <div className="w-8 h-8 rounded-full border-2 border-blue-500/30 border-t-blue-400 animate-spin" />

@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { HashRouter, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import AnalyticsPage from './pages/AnalyticsPage';
 import CandidateProfilePage from './pages/CandidateProfilePage';
@@ -13,7 +13,7 @@ import UploadPage from './pages/UploadPage';
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<LandingPage />} />
@@ -28,6 +28,6 @@ export default function App() {
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }

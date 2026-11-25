@@ -1,44 +1,80 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import {
   BarChart3,
   Briefcase,
-  Cpu,
+  EyeOff,
   FileSpreadsheet,
   Home,
   LayoutDashboard,
   Menu,
-  Settings,
+  ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   UploadCloud,
+  UserCheck,
   Users,
   X,
 } from 'lucide-react';
+import { api } from '../api';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Home', icon: Home },
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/upload', label: 'Resume Upload', icon: UploadCloud },
-  { to: '/jobs', label: 'Job Descriptions', icon: Briefcase },
-  { to: '/screening', label: 'AI Screening', icon: Cpu },
-  { to: '/results', label: 'Candidate Results', icon: Users },
-  { to: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { to: '/reports', label: 'Reports', icon: FileSpreadsheet },
-  { to: '/settings', label: 'Settings & Datasets', icon: Settings },
+  { to: '/', label: 'Overview', icon: Home },
+  { to: '/dashboard', label: 'HR Dashboard', icon: LayoutDashboard },
+  { to: '/upload', label: 'Candidate Intake', icon: UploadCloud },
+  { to: '/jobs', label: 'Open Roles', icon: Briefcase },
+  { to: '/screening', label: 'Run Screening', icon: UserCheck },
+  { to: '/results', label: 'Shortlist & Results', icon: Users },
+  { to: '/analytics', label: 'Hiring Analytics', icon: BarChart3 },
+  { to: '/reports', label: 'HR Reports', icon: FileSpreadsheet },
+  { to: '/settings', label: 'Screening Settings', icon: SlidersHorizontal },
 ];
 
 export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [blindMode, setBlindMode] = useState(false);
+  const [privacyCfg, setPrivacyCfg] = useState(null);
+
+  useEffect(() => {
+    api
+      .getSettings()
+      .then((res) => {
+        if (res?.privacy_retention) {
+          setPrivacyCfg(res.privacy_retention);
+          setBlindMode(Boolean(res.privacy_retention.anonymize_candidates));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const toggleBlindMode = async () => {
+    const next = !blindMode;
+    setBlindMode(next);
+    try {
+      const updated = {
+        anonymize_candidates: next,
+        mask_contact_info: privacyCfg?.mask_contact_info ?? true,
+        file_retention_days: privacyCfg?.file_retention_days ?? 90,
+      };
+      await api.updatePrivacy(updated);
+      setPrivacyCfg(updated);
+      window.location.reload();
+    } catch {
+      setBlindMode(!next);
+    }
+  };
 
   const navContent = (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 px-4 py-5 border-b border-white/10">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/25 shrink-0">
           <Sparkles className="w-5 h-5 text-white" />
         </div>
         <div>
-          <div className="font-display font-bold text-sm text-white leading-tight">AI-Based Resume Screening System</div>
-          <div className="text-[11px] text-slate-400">NLP Ranking Platform</div>
+          <div className="font-display font-bold text-sm text-white leading-tight">
+            AI-Based Resume Screening System
+          </div>
+          <div className="text-[11px] text-slate-400">HR Talent Suite</div>
         </div>
       </div>
 
@@ -66,10 +102,13 @@ export default function Layout() {
         })}
       </nav>
 
-      <div className="p-4 m-3 rounded-xl bg-slate-900/80 border border-white/10">
-        <div className="text-xs font-semibold text-blue-300 mb-1">NLP Engine Active</div>
+      <div className="p-4 m-3 rounded-xl bg-slate-900/80 border border-white/10 space-y-2">
+        <div className="flex items-center gap-2 text-xs font-semibold text-emerald-300">
+          <ShieldCheck className="w-4 h-4 shrink-0" />
+          Fair Hiring Guardrail
+        </div>
         <p className="text-[11px] text-slate-400 leading-relaxed">
-          spaCy NER + all-MiniLM-L6-v2 Embeddings + TF-IDF + Weighted Explainable Ranker
+          Evaluates skills, experience, and qualifications only. Personal demographics are strictly excluded.
         </p>
       </div>
     </div>
@@ -78,7 +117,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-[#060B18] mesh-bg text-slate-100 flex">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-[#080E1E]/90 backdrop-blur-xl border-r border-white/10 z-30">
+      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-[#080E1E]/95 backdrop-blur-xl border-r border-white/10 z-30">
         {navContent}
       </aside>
 
@@ -101,7 +140,7 @@ export default function Layout() {
 
       {/* Main Content */}
       <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
-        <header className="sticky top-0 z-20 flex items-center justify-between px-4 sm:px-8 h-14 bg-[#060B18]/80 backdrop-blur-xl border-b border-white/10">
+        <header className="sticky top-0 z-20 flex items-center justify-between px-4 sm:px-8 h-14 bg-[#060B18]/85 backdrop-blur-xl border-b border-white/10">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileOpen(true)}
@@ -111,14 +150,22 @@ export default function Layout() {
               <Menu className="w-5 h-5" />
             </button>
             <span className="text-xs font-medium text-slate-400 hidden sm:inline">
-              AI-Based Resume Screening System — Decision-Support Platform
+              HR Talent Screening &amp; Decision-Support Workspace
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-400/25">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Fairness Guard Active
-            </span>
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={toggleBlindMode}
+              title="Toggle Blind Screening (hides candidate names and contact details across views)"
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition ${
+                blindMode
+                  ? 'bg-violet-500/20 text-violet-200 border-violet-400/40'
+                  : 'bg-white/5 text-slate-300 border-white/15 hover:bg-white/10'
+              }`}
+            >
+              <EyeOff className="w-3.5 h-3.5" />
+              {blindMode ? 'Blind Screening: ON' : 'Blind Screening: OFF'}
+            </button>
           </div>
         </header>
 

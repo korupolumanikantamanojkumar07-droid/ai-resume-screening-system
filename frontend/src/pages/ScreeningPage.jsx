@@ -34,19 +34,20 @@ export default function ScreeningPage() {
     setSelectedResumeIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
-  const selectBySource = (sourceType) => {
-    if (sourceType === 'all') setSelectedResumeIds(resumes.map((r) => r.id));
-    else if (sourceType === 'none') setSelectedResumeIds([]);
-    else setSelectedResumeIds(resumes.filter((r) => r.source_type === sourceType).map((r) => r.id));
+  const selectGroup = (group) => {
+    if (group === 'all') setSelectedResumeIds(resumes.map((r) => r.id));
+    else if (group === 'none') setSelectedResumeIds([]);
+    else if (group === 'uploaded') setSelectedResumeIds(resumes.filter((r) => r.source_type === 'uploaded').map((r) => r.id));
+    else setSelectedResumeIds(resumes.filter((r) => r.source_type !== 'uploaded').map((r) => r.id));
   };
 
   const handleRunScreening = async () => {
     if (!selectedJobId) {
-      setError('Select a job description first.');
+      setError('Select an open role first.');
       return;
     }
     if (selectedResumeIds.length === 0) {
-      setError('Select at least one resume to screen.');
+      setError('Select at least one candidate to evaluate.');
       return;
     }
     setRunning(true);
@@ -65,14 +66,22 @@ export default function ScreeningPage() {
     }
   };
 
-  if (loading) return <LoadingSpinner label="Preparing AI Screening workspace..." />;
+  if (loading) return <LoadingSpinner label="Preparing candidate screening workspace..." />;
+
+  const weightLabels = {
+    required_skills: 'Required Skills',
+    semantic_similarity: 'Role Context Fit',
+    experience_match: 'Relevant Experience',
+    education_match: 'Education Level',
+    preferred_skills: 'Preferred Skills',
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
-        badge="Step 3 • Semantic Match & Ranking"
-        title="AI Resume Screening"
-        subtitle="Select a target job description and candidate resumes to compute semantic embeddings, TF-IDF alignment, and explainable rankings."
+        badge="Candidate Evaluation"
+        title="Screen & Rank Candidates"
+        subtitle="Select an open role and candidate pool to rank applicants by skills, experience, education, and role alignment."
         actions={
           <button
             onClick={handleRunScreening}
@@ -80,7 +89,7 @@ export default function ScreeningPage() {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-sm font-semibold text-white shadow-lg shadow-blue-600/25 disabled:opacity-50 transition"
           >
             {running ? <Cpu className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            {running ? 'Running NLP & Ranking...' : `Run AI Screening (${selectedResumeIds.length})`}
+            {running ? 'Evaluating Candidates...' : `Evaluate Candidates (${selectedResumeIds.length})`}
           </button>
         }
       />
@@ -94,17 +103,17 @@ export default function ScreeningPage() {
         <GlassCard className="p-6 space-y-5">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              1. Target Job Description
+              1. Open Role
             </label>
             <select
               value={selectedJobId}
               onChange={(e) => setSelectedJobId(e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl bg-slate-900/90 border border-white/15 text-sm text-white focus:outline-none focus:border-blue-400"
             >
-              {jobs.length === 0 && <option value="">No jobs available</option>}
+              {jobs.length === 0 && <option value="">No open roles available</option>}
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>
-                  {j.title} ({j.required_skills?.length || 0} req skills)
+                  {j.title}
                 </option>
               ))}
             </select>
@@ -114,23 +123,23 @@ export default function ScreeningPage() {
             <div className="space-y-2.5 pt-2 border-t border-white/10">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  2. Active Scoring Weights
+                  2. Evaluation Criteria
                 </span>
                 <Link to="/settings" className="text-xs text-blue-400 hover:text-blue-300">
-                  Customize
+                  Adjust
                 </Link>
               </div>
               {Object.entries(weights).map(([k, v]) => (
                 <div key={k} className="flex items-center justify-between text-xs text-slate-300">
-                  <span className="capitalize">{k.replace('_', ' ')}</span>
+                  <span>{weightLabels[k] || k}</span>
                   <span className="font-mono text-blue-300">{v}%</span>
                 </div>
               ))}
             </div>
           )}
 
-          <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-400/20 text-xs text-blue-200 leading-relaxed">
-            Deterministic scoring: protected traits (age, gender, religion, caste, nationality, photos) are strictly excluded.
+          <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-400/20 text-xs text-emerald-200 leading-relaxed">
+            Fair hiring compliant: scores evaluate role fit only and never consider age, gender, nationality, or personal traits.
           </div>
         </GlassCard>
 
@@ -138,35 +147,29 @@ export default function ScreeningPage() {
         <GlassCard className="p-6 lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              3. Select Resumes ({selectedResumeIds.length} / {resumes.length} selected)
+              3. Select Applicants ({selectedResumeIds.length} / {resumes.length} selected)
             </span>
             <div className="flex flex-wrap gap-1.5">
               <button
-                onClick={() => selectBySource('all')}
+                onClick={() => selectGroup('all')}
                 className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-slate-300"
               >
                 All
               </button>
               <button
-                onClick={() => selectBySource('uploaded')}
+                onClick={() => selectGroup('uploaded')}
                 className="px-2.5 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-xs text-sky-300"
               >
-                Uploaded Only
+                Uploaded CVs
               </button>
               <button
-                onClick={() => selectBySource('synthetic_demo')}
-                className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-xs text-amber-300"
+                onClick={() => selectGroup('pool')}
+                className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-slate-300"
               >
-                Synthetic Demo
+                Talent Pool
               </button>
               <button
-                onClick={() => selectBySource('public_dataset')}
-                className="px-2.5 py-1 rounded-lg bg-violet-500/15 hover:bg-violet-500/25 text-xs text-violet-300"
-              >
-                Dataset Only
-              </button>
-              <button
-                onClick={() => selectBySource('none')}
+                onClick={() => selectGroup('none')}
                 className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-slate-400"
               >
                 Clear
@@ -177,8 +180,8 @@ export default function ScreeningPage() {
           {resumes.length === 0 ? (
             <EmptyState
               icon={Sparkles}
-              title="No processed resumes"
-              description="Upload resumes or load public datasets first."
+              title="No applicants ready"
+              description="Upload candidate resumes under Candidate Intake first."
             />
           ) : (
             <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
@@ -201,7 +204,7 @@ export default function ScreeningPage() {
                         <Square className="w-4 h-4 text-slate-500 shrink-0" />
                       )}
                       <div className="min-w-0">
-                        <div className="text-sm font-medium text-white truncate">{r.candidate_name || r.filename}</div>
+                        <div className="text-sm font-medium text-white truncate">{r.candidate_name || 'Applicant'}</div>
                         <div className="text-xs text-slate-400 truncate">
                           {r.experience_years} yrs • {r.education_level} • {r.skills_count} skills
                         </div>
@@ -221,14 +224,14 @@ export default function ScreeningPage() {
         <GlassCard className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
             <div>
-              <h2 className="text-lg font-bold text-white">Screening Rankings: {results.job_title}</h2>
-              <p className="text-xs text-slate-400">Screened {results.screened_count} candidate(s) successfully.</p>
+              <h2 className="text-lg font-bold text-white">Ranked Shortlist: {results.job_title}</h2>
+              <p className="text-xs text-slate-400">Evaluated {results.screened_count} candidate(s).</p>
             </div>
             <Link
               to={`/results?job_id=${results.job_id}`}
               className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white"
             >
-              Open Full Results &amp; Filters →
+              Open Shortlist &amp; Filters →
             </Link>
           </div>
 
@@ -238,9 +241,8 @@ export default function ScreeningPage() {
                 <tr className="border-b border-white/10 text-xs text-slate-400">
                   <th className="py-2.5 pr-3">Rank</th>
                   <th className="py-2.5 pr-3">Candidate</th>
-                  <th className="py-2.5 pr-3">Overall</th>
-                  <th className="py-2.5 pr-3">Req Skills</th>
-                  <th className="py-2.5 pr-3">Semantic</th>
+                  <th className="py-2.5 pr-3">Overall Fit</th>
+                  <th className="py-2.5 pr-3">Required Skills</th>
                   <th className="py-2.5 pr-3">Matched Skills</th>
                   <th className="py-2.5 pr-3">Missing Skills</th>
                   <th className="py-2.5">Status</th>
@@ -259,9 +261,6 @@ export default function ScreeningPage() {
                       <ScoreBadge score={r.overall_score} />
                     </td>
                     <td className="py-3 pr-3 font-mono text-xs text-slate-300">{r.required_skill_score.toFixed(0)}%</td>
-                    <td className="py-3 pr-3 font-mono text-xs text-violet-300">
-                      {r.semantic_similarity_score.toFixed(0)}%
-                    </td>
                     <td className="py-3 pr-3">
                       <div className="flex flex-wrap gap-1 max-w-xs">
                         {(r.matched_skills || []).slice(0, 4).map((s) => (

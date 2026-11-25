@@ -59,21 +59,21 @@ export default function ReportsPage() {
     }
   };
 
-  if (loading) return <LoadingSpinner label="Loading screening reports..." />;
+  if (loading) return <LoadingSpinner label="Loading HR reports..." />;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        badge="Exports & Audit"
-        title="Screening Reports"
-        subtitle="Export ranked candidate tables to CSV, generate batch PDF screening reports, download individual candidate dossiers, and export skill gap analyses."
+        badge="Hiring Manager Exports"
+        title="HR Reports & Exports"
+        subtitle="Export ranked shortlists to CSV, generate PDF hiring summaries, download individual candidate dossiers, or export skill gap reports."
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <GlassCard className="p-6 space-y-4">
-          <h2 className="text-base font-semibold text-white">Job Screening Exports (CSV &amp; PDF)</h2>
+          <h2 className="text-base font-semibold text-white">Role Shortlist Exports (CSV &amp; PDF)</h2>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Select Job Description</label>
+            <label className="block text-xs text-slate-400 mb-1">Select Open Role</label>
             <select
               value={selectedJobId}
               onChange={(e) => setSelectedJobId(e.target.value)}
@@ -94,7 +94,7 @@ export default function ReportsPage() {
               onChange={(e) => setIncludePii(e.target.checked)}
               className="rounded border-white/20 bg-slate-900"
             />
-            Include candidate names/emails in exported report (otherwise uses Anonymous IDs)
+            Include candidate names &amp; contact details in exported file
           </label>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
@@ -104,7 +104,7 @@ export default function ReportsPage() {
               className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-semibold text-white disabled:opacity-50"
             >
               <FileSpreadsheet className="w-4 h-4" />
-              Rankings CSV
+              Shortlist CSV
             </button>
             <button
               onClick={() => handleGenerate('batch_pdf')}
@@ -112,7 +112,7 @@ export default function ReportsPage() {
               className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-xs font-semibold text-white disabled:opacity-50"
             >
               <FileText className="w-4 h-4" />
-              Batch PDF
+              Summary PDF
             </button>
             <button
               onClick={() => handleGenerate('skills_csv')}
@@ -120,13 +120,13 @@ export default function ReportsPage() {
               className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white disabled:opacity-50"
             >
               <FileSpreadsheet className="w-4 h-4" />
-              Skills CSV
+              Skill Gap CSV
             </button>
           </div>
         </GlassCard>
 
         <GlassCard className="p-6 space-y-4">
-          <h2 className="text-base font-semibold text-white">Individual Candidate PDF Report</h2>
+          <h2 className="text-base font-semibold text-white">Individual Candidate Dossier (PDF)</h2>
           <div>
             <label className="block text-xs text-slate-400 mb-1">Select Candidate</label>
             <select
@@ -136,7 +136,7 @@ export default function ReportsPage() {
             >
               {candidates.map((c) => (
                 <option key={c.candidate_id} value={c.candidate_id}>
-                  {c.candidate_name || c.anonymous_id} ({c.anonymous_id})
+                  {c.candidate_name || 'Applicant'}
                 </option>
               ))}
             </select>
@@ -147,7 +147,7 @@ export default function ReportsPage() {
             className="inline-flex items-center gap-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-xs font-semibold text-white disabled:opacity-50"
           >
             <Download className="w-4 h-4" />
-            Generate Individual Candidate PDF
+            Download Candidate Dossier PDF
           </button>
         </GlassCard>
       </div>
@@ -165,9 +165,9 @@ export default function ReportsPage() {
       )}
 
       <GlassCard className="p-6">
-        <h2 className="text-base font-semibold text-white mb-4">Generated Reports History</h2>
+        <h2 className="text-base font-semibold text-white mb-4">Recent Exports</h2>
         {reports.length === 0 ? (
-          <EmptyState icon={FileText} title="No reports generated yet" description="Use the controls above to generate CSV or PDF reports." />
+          <EmptyState icon={FileText} title="No reports generated yet" description="Use the export actions above to generate CSV or PDF reports." />
         ) : (
           <div className="space-y-2.5">
             {reports.map((rep) => (
